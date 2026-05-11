@@ -1,0 +1,48 @@
+name: Build2
+
+'on':
+  push:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check files
+        run: ls -la
+
+      - name: Find ZIP
+        run: |
+          ZIP_FILE=$(find . -maxdepth 1 -name "*.zip" | head -n 1)
+          echo "ZIP_FILE=$ZIP_FILE" >> $GITHUB_ENV
+          test -n "$ZIP_FILE"
+
+      - name: Unzip
+        run: |
+          unzip -o "$ZIP_FILE" -d source
+          ls -la source
+
+      - name: Copy source
+        run: |
+          shopt -s dotglob
+          cp -r source/* .
+          ls -la
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - name: Build APK
+        run: |
+          chmod +x gradlew
+          ./gradlew --no-daemon assembleScrcpyDebug
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: apk
+          path: app/build/outputs/apk/**/*.apk
